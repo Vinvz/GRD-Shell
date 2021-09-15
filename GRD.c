@@ -1,7 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/wait.h>
 
 #define GRD_RL_BUFSIZE 1024
+#define GRD_TOK_BUFSIZE 64
+#define GRD_TOK_DELIM " \t\r\n\a"
 
 
 void GRD_loop()
@@ -12,8 +17,8 @@ void GRD_loop()
 
     do{
         printf("\nGRD >> "); //o atual prompt do shell
-        line = GRD_read_line();
-        args = GRD_split_line(line);
+        line = GRD_read();
+        args = GRD_parse(line);
         status = GRD_execute(args);
 
         free(line);
@@ -21,7 +26,7 @@ void GRD_loop()
     } while (status);
 }
 
-char *GRD_read_line(void)
+char *GRD_read(void)
 {
     int bufsize = GRD_RL_BUFSIZE;
     int pos = 0;
@@ -29,7 +34,7 @@ char *GRD_read_line(void)
     int c;
 
     if (buffer == NULL){
-        fprintf(stderr, "GRD: erro de alocacao\n");
+        fprintf(stderr, "GRD: erro de alocação\n");
         exit(EXIT_FAILURE);
     }
 
@@ -49,14 +54,72 @@ char *GRD_read_line(void)
             buffer = realloc(buffer, bufsize);
 
             if (buffer == NULL) {
-                fprintf(stderr, "GRD: erro de alocacao");
+                fprintf(stderr, "GRD: erro de alocação\n");
                 exit(EXIT_FAILURE);
             }
         }
     }
 }
 
+char **GRD_parse(char *line)
+{
+    int bufsize = GRD_TOK_BUFSIZE, pos = 0;
+    char **tokens = malloc(bufsize * sizeof(char*));
+    char *token;
 
+    if (tokens == NULL){
+        fprintf(stderr, "GRD: Erro de alocação\n");
+        exit(EXIT_FAILURE);
+    }
+
+    token = strtok(line, GRD_TOK_DELIM);
+    while (token != NULL) {
+        tokens[pos] = token;
+        pos++;
+
+        if (pos >= bufsize) {
+            bufsize += GRD_TOK_BUFSIZE;
+            tokens = realloc(tokens, bufsize * sizeof(char*));
+
+            if (tokens == NULL){
+                fprintf(stderr, "GRD: Erro de alocação\n");
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        token == strtok(NULL, GRD_TOK_DELIM);
+    }
+    
+    tokens[pos] = NULL;
+    return tokens;
+
+}
+
+int GRD_execute(char **args)
+{
+    pid_t pid, wpid;
+    int status;
+
+    pid = fork();
+    if (pid == 0){
+        // processo filho
+        if (execvp(args[0], args) == -1){
+            perror("GRD");
+        }
+        exit(EXIT_FAILURE);
+    } else if (pid < 0){
+        // forking de erros
+        perror("GRD");
+    } else {
+        // processo pai
+        do {
+            wpid = waitpid(pid, &status, WUNTRACED);
+        } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+    }
+
+    return 1;
+
+}
 
 int main(int argc, char **argv)
 {
