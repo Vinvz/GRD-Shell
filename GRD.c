@@ -8,23 +8,27 @@
 #define GRD_TOK_BUFSIZE 64
 #define GRD_TOK_DELIM " \t\r\n\a"
 
+// declaração das funções built-in
+int GRD_cd(char **args);
+int GRD_help(char **args);
+int GRD_exit(char **args);
 
-void GRD_loop()
-{
-    char *line;
-    char **args;
-    int status;
+// lista dos comandos built-in
+char *builtin_str[] = {
+    "cd",
+    "help",
+    "exit",
+};
 
-    do{
-        printf("\nGRD >> "); //o atual prompt do shell
-        line = GRD_read();
-        args = GRD_parse(line);
-        status = GRD_execute(args);
+int (*builtin_func[]) (char **) = {
+    &GRD_cd,
+    &GRD_help,
+    &GRD_exit
+};
 
-        free(line);
-        free(args);
-    } while (status);
-}
+int GRD_num_builtins(){
+    return sizeof(builtin_str) / sizeof(char *);
+};
 
 char *GRD_read(void)
 {
@@ -92,10 +96,9 @@ char **GRD_parse(char *line)
     
     tokens[pos] = NULL;
     return tokens;
-
 }
 
-int GRD_execute(char **args)
+int GRD_launch(char **args)
 {
     pid_t pid, wpid;
     int status;
@@ -116,9 +119,72 @@ int GRD_execute(char **args)
             wpid = waitpid(pid, &status, WUNTRACED);
         } while (!WIFEXITED(status) && !WIFSIGNALED(status));
     }
+    return 1;
+}
+
+// funções built-in
+int GRD_cd(char **args)
+{
+    if (args[1] == NULL){
+        fprintf(stderr, "GRD: argumento esperado para 'cd'\n");
+    } else{
+        if (chdir(args[1]) != 0){
+            perror("GRD");
+        }
+    }
+    return 1;
+}
+
+int GRD_help(char **args)
+{
+    int i;
+    printf("GRD Shell\n");
+    printf("Esses são os comandos disponíveis deste shell:\n");
+
+    for (i = 0; i < GRD_num_builtins(); i++){
+        printf("  %s\n", builtin_str[i]);
+    }
 
     return 1;
+}
 
+int GRD_exit(char **args)
+{
+    return 0;
+}
+
+int GRD_execute(char **args)
+{
+    int i;
+
+    if (args[0] == NULL){ // um comando vazio foi inserido
+        return 1;
+    }
+
+    for (i = 0; i < GRD_num_builtins(); i++){
+        if (strcmp(args[0], builtin_str[i]) == 0){
+            return (*builtin_func[i]) (args);
+        }
+    }
+
+    return GRD_launch(args);
+}
+
+void GRD_loop()
+{
+    char *line;
+    char **args;
+    int status;
+
+    do{
+        printf("\nGRD >> "); //o atual prompt do shell
+        line = GRD_read();
+        args = GRD_parse(line);
+        status = GRD_execute(args);
+
+        free(line);
+        free(args);
+    } while (status);
 }
 
 int main(int argc, char **argv)
