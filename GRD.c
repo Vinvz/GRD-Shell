@@ -30,6 +30,38 @@ int GRD_num_builtins(){
     return sizeof(builtin_str) / sizeof(char *);
 };
 
+// funções built-in
+int GRD_help(char **args)
+{
+    int i;
+    printf("GRD Shell\n");
+    printf("Esses são os comandos disponíveis deste shell:\n");
+
+    for (i = 0; i < GRD_num_builtins(); i++){
+        printf("  %s\n", builtin_str[i]);
+    }
+
+    return 1;
+}
+
+int GRD_cd(char **args)
+{
+    if (args[1] == NULL){
+        fprintf(stderr, "GRD: argumento esperado para 'cd'\n");
+    } else{
+        if (chdir(args[1]) != 0){
+            perror("GRD");
+        }
+    }
+    return 1;
+}
+
+
+int GRD_exit(char **args)
+{
+    return 0;
+}
+
 char *GRD_read(void)
 {
     int bufsize = GRD_RL_BUFSIZE;
@@ -120,37 +152,6 @@ int GRD_launch(char **args)
         } while (!WIFEXITED(status) && !WIFSIGNALED(status));
     }
     return 1;
-}
-
-// funções built-in
-int GRD_cd(char **args)
-{
-    if (args[1] == NULL){
-        fprintf(stderr, "GRD: argumento esperado para 'cd'\n");
-    } else{
-        if (chdir(args[1]) != 0){
-            perror("GRD");
-        }
-    }
-    return 1;
-}
-
-int GRD_help(char **args)
-{
-    int i;
-    printf("GRD Shell\n");
-    printf("Esses são os comandos disponíveis deste shell:\n");
-
-    for (i = 0; i < GRD_num_builtins(); i++){
-        printf("  %s\n", builtin_str[i]);
-    }
-
-    return 1;
-}
-
-int GRD_exit(char **args)
-{
-    return 0;
 }
 
 int GRD_execute(char **args)
