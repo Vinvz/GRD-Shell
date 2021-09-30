@@ -1,90 +1,84 @@
-// C Program to design a shell in Linux
 #include<stdio.h>
 #include<string.h>
 #include<stdlib.h>
 #include<unistd.h>
 #include<sys/wait.h>
 #include<readline/readline.h>
-#include<readline/history.h>
   
-#define MAXCOM 1000 // max number of letters to be supported
-#define MAXLIST 100 // max number of commands to be supported
-  
-// Function to take input
-int takeInput(char* str)
+#define MAXLETTER 1000
+#define MAXCOMM 100
+
+int read_input(char* str)
 {
-    char* buf;
-  
-    buf = readline("\n>>> ");
-    if (strlen(buf) != 0) {
-        add_history(buf);
-        strcpy(str, buf);
+    char* buffer;
+    buffer = readline("\nGVS > ");
+    
+    if (strlen(buffer) != 0){
+        strcpy(str, buffer);
         return 0;
     } else {
         return 1;
     }
 }
-  
-// Function where the system command is executed
-void execArgs(char** parsed)
+
+void execute(char** parsed)
 {
-    // Forking a child
-    pid_t pid = fork(); 
-  
+    pid_t pid = fork(); // criando o fork filho
+
     if (pid == -1) {
-        printf("\nFailed forking child..");
+        printf("\nProcesso de fork falhou.");
         return;
     } else if (pid == 0) {
-        if (execvp(parsed[0], parsed) < 0) {
-            printf("\nCould not execute command..");
+        if (execvp(parsed[0], parsed) < 0){
+            printf("\nNão foi possível executar o comando");
         }
         exit(0);
     } else {
-        // waiting for child to terminate
-        wait(NULL); 
+        wait(NULL); // esperando pelo fim do processo filho
         return;
     }
 }
   
-// Help command builtin
+// comando built-in de ajuda
 void openHelp()
 {
-    puts("help, desenvolvendo.");
+    puts("Essa é a aba de ajuda do GVShell."
+        "\nEsses são so comandos disponíveis:"
+        "\n- cd: Troca o diretório atual"
+        "\n- ls: Lista os arquivos no diretório"
+        "\n- exit: Encerra o shell"
+        "\n- Comandos gerais encontrados em Shells Unix"
+        "\nTambém há suporte para o uso de pipes.");
     return;
 }
   
-// Function to execute builtin commands
-int ownCmdHandler(char** parsed)
+// Função para executar comandos built-in
+int builtin_handler(char** parsed)
 {
-    int NoOfOwnCmds = 4, i, switchOwnArg = 0;
-    char* ListOfOwnCmds[NoOfOwnCmds];
+    int num_commands = 4, i, on_args = 0;
+    char* list_commands[num_commands];
     char* username;
-    ListOfOwnCmds[0] = "exit";
-    ListOfOwnCmds[1] = "cd";
-    ListOfOwnCmds[2] = "help";
-    ListOfOwnCmds[3] = "hello";
+
+    list_commands[0] = "exit";
+    list_commands[1] = "cd";
+    list_commands[2] = "help";
   
-    for (i = 0; i < NoOfOwnCmds; i++) {
-        if (strcmp(parsed[0], ListOfOwnCmds[i]) == 0) {
-            switchOwnArg = i + 1;
+    for (i = 0; i < num_commands; i++){
+        if (strcmp(parsed[0], list_commands[i]) == 0) {
+            on_args = i + 1;
             break;
         }
     }
   
-    switch (switchOwnArg) {
+    switch (on_args){
     case 1:
-        printf("\nGoodbye\n");
+        printf("\nEncerrando Shell\n");
         exit(0);
     case 2:
         chdir(parsed[1]);
         return 1;
     case 3:
         openHelp();
-        return 1;
-    case 4:
-        username = getenv("USER");
-        printf("\nHello %s.\n",
-            username);
         return 1;
     default:
         break;
@@ -93,57 +87,55 @@ int ownCmdHandler(char** parsed)
 }
   
 // function for parsing command words
-void parseSpace(char* str, char** parsed)
+void parse_comms(char* str, char** parsed)
 {
     int i;
-    for (i = 0; i < MAXLIST; i++) {
+
+    for (i = 0; i < MAXCOMM; i++){
         parsed[i] = strsep(&str, " ");
-        if (parsed[i] == NULL)
+
+        if (parsed[i] == NULL){
             break;
-        if (strlen(parsed[i]) == 0)
+        }
+        if (strlen(parsed[i]) == 0){
             i--;
+        }
     }
 }
   
-int processString(char* str, char** parsed)
+int process_string(char* str, char** parsed)
 {
-    char* strpiped[2];
+    char* piped_string[2];
     int piped = 0;
   
-    if (piped) {
-        parseSpace(strpiped[0], parsed);
+    if (piped){
+        parse_comms(piped_string[0], parsed);
   
     } else {
-        parseSpace(str, parsed);
+        parse_comms(str, parsed);
     }
   
-    if (ownCmdHandler(parsed))
+    if (builtin_handler(parsed)){
         return 0;
-    else
+    } else {
         return 1 + piped;
+    }
 }
   
-int main()
+int main(void)
 {
-    char inputString[MAXCOM], *parsedArgs[MAXLIST];
-    char* parsedArgsPiped[MAXLIST];
-    int execFlag = 0;
+    char input[MAXLETTER], *args[MAXCOMM];
+    char* piped_args[MAXCOMM];
+    int flag = 0;
   
-    while (1) {
-        // take input
-        if (takeInput(inputString))
+    while (1){
+        if (read_input(input))
             continue;
-        // process
-        execFlag = processString(inputString,
-        parsedArgs);
-        // execflag returns zero if there is no command
-        // or it is a builtin command,
-        // 1 if it is a simple command
-        // 2 if it is including a pipe.
-
-        // execute
-        if (execFlag == 1)
-            execArgs(parsedArgs);
+        flag = process_string(input, args);
+        // a flag retornará 0 se não houver comando ou se for built-in
+        // retornará 1 se for um comando simples
+        if (flag == 1)
+            execute(args);
     }
     return 0;
 }
