@@ -39,54 +39,49 @@ void execute(char** parsed)
     }
 }
 
-void execArgsPiped(char** parsed, char** parsedpipe)
+// função para executar pipes
+void execute_pipe(char** parsed, char** parsedpipe)
 {
-    // 0 is read end, 1 is write end
+    // 0 é final de leitura, 1 é final de escrita
     int pipefd[2]; 
     pid_t p1, p2;
   
     if (pipe(pipefd) < 0) {
-        printf("\nPipe could not be initialized");
+        printf("\nPipe não foi inicializado");
         return;
     }
     p1 = fork();
     if (p1 < 0) {
-        printf("\nCould not fork");
+        printf("\nNão foi possível forkar");
         return;
     }
   
-    if (p1 == 0) {
-        // Child 1 executing..
-        // It only needs to write at the write end
+    if (p1 == 0) { // filho executando
         close(pipefd[0]);
         dup2(pipefd[1], STDOUT_FILENO);
         close(pipefd[1]);
   
         if (execvp(parsed[0], parsed) < 0) {
-            printf("\nCould not execute command 1..");
+            printf("\nNão foi possível executar o comando 1");
             exit(0);
         }
-    } else {
-        // Parent executing
+    } else { // pai executando
         p2 = fork();
   
         if (p2 < 0) {
-            printf("\nCould not fork");
+            printf("\nNão foi possível forkar");
             return;
         }
   
-        // Child 2 executing..
-        // It only needs to read at the read end
-        if (p2 == 0) {
+        if (p2 == 0) { // filho 2 executando
             close(pipefd[1]);
             dup2(pipefd[0], STDIN_FILENO);
             close(pipefd[0]);
             if (execvp(parsedpipe[0], parsedpipe) < 0) {
-                printf("\nCould not execute command 2..");
+                printf("\nNão foi possível executar o comando 2");
                 exit(0);
             }
-        } else {
-            // parent executing, waiting for two children
+        } else { // pai executando, esperando pelos 2 filhos
             wait(NULL);
             wait(NULL);
         }
@@ -140,8 +135,8 @@ int builtin_handler(char** parsed)
     return 0;
 }
 
-// function for finding pipe
-int parsePipe(char* str, char** strpiped)
+// função para achar pipes
+int pipe_parser(char* str, char** strpiped)
 {
     int i;
     for (i = 0; i < 2; i++) {
@@ -151,13 +146,13 @@ int parsePipe(char* str, char** strpiped)
     }
   
     if (strpiped[1] == NULL)
-        return 0; // returns zero if no pipe is found.
+        return 0; // retorna zero caso pipe nulo
     else {
         return 1;
     }
 }
 
-// function for parsing command words
+// função para achar comandos simples
 void parse_comms(char* str, char** parsed)
 {
     int i;
@@ -209,7 +204,7 @@ int main(void)
         if (flag == 1)
             execute(args);
         if (flag == 2)
-            execArgsPiped(args, piped_args);
+            execute_pipe(args, piped_args);
     }
     return 0;
 }
