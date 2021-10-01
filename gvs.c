@@ -201,6 +201,7 @@ int main(void)
         flag = process_string(input, args, piped_args);
         // a flag retornará 0 se não houver comando ou se for built-in
         // retornará 1 se for um comando simples
+        // retornará 2 se for um comando contendo pipes
         if (flag == 1)
             execute(args);
         if (flag == 2)
