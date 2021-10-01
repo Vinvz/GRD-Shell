@@ -89,7 +89,7 @@ void execute_pipe(char** parsed, char** parsedpipe)
 }
 
 // comando built-in de ajuda
-void openHelp()
+void help()
 {
     puts("Essa é a aba de ajuda do GVShell."
         "\nEsses são so comandos disponíveis:"
@@ -127,7 +127,7 @@ int builtin_handler(char** parsed)
         chdir(parsed[1]);
         return 1;
     case 3:
-        openHelp();
+        help();
         return 1;
     default:
         break;
